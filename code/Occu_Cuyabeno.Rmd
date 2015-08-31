@@ -1,23 +1,39 @@
+---
+title: Ocupación, bajo el modelo estático (MacKenzie et al. 2002) para para las especies
+  de mamíferos en Cuyabeno
+author: Departamento Central de Investigaciones (DCI), \break Universidad Laica Eloy
+  Alfaro de Manabi (ULEAM)
+date: "Mayo, 2015"
+output:
+  pdf_document:
+    highlight: tango
+    number_sections: yes
+    toc: yes
+  html_document:
+    toc: yes
+  word_document:
+    highlight: kate
+license: CC
+box: grey
+---
 
-######### load packages
+# Duración del muestreo
+
+Las trampas cámara permanecieron activas desde abril 2013 hasta julio 2013.
+ 
+
+```{r calendar1,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=9,fig.width=8}
+
+library(xtable)
 library(lubridate)
 library(dplyr)
-library(xtable)
 library(maptools)
 # Load 'rgdal' package, which is used to read/write shapefiles and rasters
 library(rgdal)
+source("C:/Users/Diego/Documents/CodigoR/ULEAM/Infor_Caract/code/TEAM_code.R")
+source("C:/Users/Diego/Documents/CodigoR/ULEAM/Infor_Caract/code/calendar.R")
 
-
-############################## get source code
-source("code/calendar.R")
-source("code/f_matrix2_code.R")
-############################################
-
-############################################
-################ Load Enrique Data set
 cuyabeno.raw<-read.csv("Data/FaunaCuyabeno.csv")
-############################################
-# make sure the columns have the same names and date format
 
 #############################
 #### date fix
@@ -25,7 +41,9 @@ cuyabeno.raw<-read.csv("Data/FaunaCuyabeno.csv")
 
 # unique(year(cuyabeno.raw$camera_trap_start_time))
 cuyabeno.raw$photo_date2<-as.Date(as.character(cuyabeno.raw$Fecha), "%d-%m-%Y")
+
 cuyabeno.raw$Sampling.Period<-2013
+
 cuyabeno.raw$camera_trap_start_date<-as.Date(substr(as.character(cuyabeno.raw$camera_trap_start_date), start=1, stop=11), "%d-%m-%Y")
 cuyabeno.raw$camera_trap_end_date<-as.Date(substr(as.character(cuyabeno.raw$camera_trap_end_date), start=1, stop=11), "%d-%m-%Y")
 
@@ -42,14 +60,31 @@ cuyabeno.raw$month<-month(cuyabeno.raw$photo_date2)
 # make photo calendar type
 ####################################
 
- f.calendar.yr(dataset = cuyabeno.raw, yr_toplot = 1)
+# f.calendar.yr(dataset = cuyabeno.raw, yr_toplot = 1)
+```
 
 
+```{r calendarplot,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=11,fig.width=8}
+####################################
+# make photo calendar type
+####################################
 
+f.calendar.yr(dataset = cuyabeno.raw, yr_toplot = 1)
+```
+
+# Especies registradas
+
+Las especies registradas en Cuyabeno fueron XXXX fix some names
+
+
+```{r sps,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,results='asis'}
+library(xtable)
+library(dplyr)
 #######################
-### make matrix per species names
+### fix names
 ######################
 
+# cuyabeno.raw$cams<-camera_trap
 
 mat.per.sp<-f.matrix.creator2(data = cuyabeno.raw,year = 2013)
 sp.names<-names(mat.per.sp) # species names
@@ -66,6 +101,10 @@ colnames(cont.per.sp)<-c("Numero_de_fotos","especie")
 wanttex <- xtable(arrange(df = cont.per.sp, desc(Numero_de_fotos)))
 #print(wanttex,sanitize.text.function=function(str)gsub("_","\\_",str,fixed=TRUE), floating=FALSE)
 print(wanttex,floating=TRUE)
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 
 # Localizacion de las camaras
@@ -133,16 +172,30 @@ overlay <- stat_density2d(
 # con google
 g3<- g1 + overlay + scale_fill_gradient(low = "blue", high = "red") + facet_wrap(~ Orden, ncol = 3)
  
- 
-# plot maps
+
+```
+
+```{r plotcam1,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=8,fig.width=8}
 plot(g1)
-plot(g3) # per Orden
+```
 
+# Fotos por grupos de animales (Ordenes)
 
-
+```{r plotcam2,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=11,fig.width=8}
+plot(g3)
+```
 
 # Covariables 
 
+Inicialmente se probó con Altitud (elev), distancia al rio (dis_rd) e intensidad de caceria, como covariables geográficas. 
+
+La Altitud se obtuvo de una imagen SRTM del repositorio de [CGIAR](http://srtm.csi.cgiar.org/). La distancia al rio se obtuvo del mapa de rios de Ecuador en: DivaGis
+
+
+```{r covars,eval=TRUE,echo=FALSE,cache=TRUE}
+
+library(raster)
+library(dplyr)
 
 long<-unique(cuyabeno.raw$longitude)
 lati<-unique(cuyabeno.raw$latitude)
@@ -153,18 +206,16 @@ coordsubset<-subset(cuyabeno.raw,select = c(camera_trap,longitude,latitude,Habit
 # get elevation
 ################################
 
-rm(unmarked) # in case is already loaded
-elevation<-getData('SRTM',lon=centercoord[1], lat=centercoord[2],download = TRUE, path="elev_cuyabeno") # in conflict with Unmarked !!! 
+# elevation<-getData('SRTM',lon=centercoord[1], lat=centercoord[2],download = TRUE, path="elev_cuyabeno") # in conflict with Unmarked
 
  # read elevation from disk
-# elevation<- raster("C://Users//Diego//Documents//CodigoR//ULEAM//Cuyabeno//elev_cuyabeno//srtm_21_13.tif")
+elevation<- raster("C://Users//Diego//Documents//CodigoR//ULEAM//Cuyabeno//elev_cuyabeno//srtm_21_13.tif")
 
 cam.cords<-as.data.frame(distinct(coordsubset))
 coordinates(cam.cords) <- ~longitude+latitude #make sppatial data fram
 geo <- CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0") #def cord
 proj4string(cam.cords)<-geo # set cords
 
-# FIX EXTEND MANUALLY 
 e<-extent (-75.8000, -75.70000, -0.3611207, -0.2433732)
 elevation.crop<-crop(elevation, e)
 
@@ -212,13 +263,11 @@ cam.cords$elev<-elev.ovr
 
 cam.and.covs<-as.data.frame(cam.cords)
 
-################################
-# remove raster package. In conflict with unmarked
-rm (raster)
-################################
+```
 
 
-#### fUNCTION TO plot unmarked data frames per species
+```{r functions,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,results='asis'}
+
 f.sp.occu.plot.mat <- function(sp_number){
     ########################
     ### shrink to 15
@@ -243,7 +292,6 @@ f.sp.occu.plot.mat <- function(sp_number){
 }
 
 
-#### fUNCTION TO make unmarked data frames per species and basic models
 f.sp.occu.models <- function(sp_number){
     ########################
     ### shrink to 15
@@ -318,82 +366,121 @@ f.sp.occu.models <- function(sp_number){
 
 
 
-
+```
 
 #Modelos de ocupacion por especie
-
 ## La Guanta (_Cuniculus paca_)
 ### Matriz de datos colapsada sin colapsar
+
+```{r mat_sp1,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=5,fig.width=7}
  f.sp.occu.plot.mat(sp_number = 1)
+```
+
 ### Seleccion de Modelos
+```{r modeo_sps1,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,results='asis'}
 print(as.character(sp.names[sp_number=1]))
 f.sp.occu.models(sp_number = 1)
-
+```
 
 
 
 ## El Venado (_Mazama americana_)
 ### Matriz de datos colapsada sin colapsar
+
+```{r mat_sp2,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=5,fig.width=7}
  f.sp.occu.plot.mat(sp_number = 2)
+```
+
 ### Seleccion de Modelos
+```{r modeo_sps2,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,results='asis'}
 print(as.character(sp.names[sp_number=2]))
 f.sp.occu.models(sp_number = 2)
-
+```
 
 
 
 
 ## El Tapir (_Tapirus terrestris_)
 ### Matriz de datos colapsada sin colapsar
+
+```{r mat_sp4,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=5,fig.width=7}
  f.sp.occu.plot.mat(sp_number = 4)
+```
+
 ### Seleccion de Modelos
+```{r modeo_sps4,cache=TRUE,warning=FALSE,eval=FALSE, echo=FALSE,results='asis'}
 print(as.character(sp.names[sp_number=4]))
 f.sp.occu.models(sp_number = 4)
-
+```
 
 
 ## El Venado (_Mazama gouazoubira_)
 ### Matriz de datos colapsada sin colapsar
+
+```{r mat_sp7,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=5,fig.width=7}
  f.sp.occu.plot.mat(sp_number = 7)
+```
+
 ### Seleccion de Modelos
+```{r modeo_sps7,cache=TRUE,warning=FALSE,eval=FALSE, echo=FALSE,results='asis'}
 print(as.character(sp.names[sp_number=7]))
 f.sp.occu.models(sp_number = 7)
-
+```
 
 
 ## La Guatusa (_Dasyprocta fuliginosa_)
 ### Matriz de datos colapsada sin colapsar
+
+```{r mat_sp5,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=5,fig.width=7}
  f.sp.occu.plot.mat(sp_number = 5)
+```
+
 ### Seleccion de Modelos
+```{r modeo_sps5,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,results='asis'}
 print(as.character(sp.names[sp_number=5]))
 f.sp.occu.models(sp_number = 5)
-
+```
 
 
 ## El Ocelote (_Leopardus pardalis_)
 ### Matriz de datos colapsada sin colapsar
+
+```{r mat_sp11,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=5,fig.width=7}
  f.sp.occu.plot.mat(sp_number = 11)
+```
+
 ### Seleccion de Modelos
+```{r modeo_sps11,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,results='asis'}
 print(as.character(sp.names[sp_number=11]))
 f.sp.occu.models(sp_number = 11)
-
+```
 
 
 
 ## El Pecari (_Pecari tajacu_)
 ### Matriz de datos colapsada sin colapsar
+
+```{r mat_sp16,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=5,fig.width=7}
  f.sp.occu.plot.mat(sp_number = 16)
+```
+
 ### Seleccion de Modelos
+```{r modeo_sps16,cache=TRUE,warning=FALSE,eval=FALSE, echo=FALSE,results='asis'}
 print(as.character(sp.names[sp_number=16]))
 f.sp.occu.models(sp_number = 16)
-
+```
 
 
 ## El Pecari (_Tayassu pecari_)
 ### Matriz de datos colapsada sin colapsar
 
+```{r mat_sp26,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,fig.height=5,fig.width=7}
  f.sp.occu.plot.mat(sp_number = 26)
+```
+
 ### Seleccion de Modelos
+```{r modeo_sps26,cache=TRUE,warning=FALSE,eval=TRUE, echo=FALSE,results='asis'}
 print(as.character(sp.names[sp_number=26]))
 f.sp.occu.models(sp_number = 26)
+```
 
